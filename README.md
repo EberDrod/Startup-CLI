@@ -150,24 +150,3 @@ Si esta herramienta ayuda a otros equipos a trabajar de forma más organizada, e
 
 ---
 
-# 🌐 Publicación en LinkedIn
-
-Hoy estoy compartiendo **Startup CLI**, una pequeña herramienta que desarrollé para organizar múltiples proyectos dentro de una misma estructura de desarrollo.
-
-En equipos pequeños esto puede parecer innecesario, pero cuando empiezas a trabajar con:
-
-- varios productos
-- diferentes servicios
-- múltiples desarrolladores
-
-la consistencia se vuelve clave.
-
-Startup CLI automatiza la creación de estructuras de proyecto y ayuda a mantener orden en entornos de desarrollo con muchos repositorios.
-
-Más allá del código, el objetivo es promover **buenas prácticas de ingeniería desde el inicio de un proyecto**.
-
-Si trabajas en una startup o en un equipo que gestiona múltiples servicios, probablemente ya te enfrentaste a estos problemas.
-
-Espero que esta herramienta sea útil para otros desarrolladores también.
-
-Siempre abierto a feedback y mejoras de la comunidad.
