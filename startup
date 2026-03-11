@@ -1,0 +1,418 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+BASE_DIR="${HOME}/Developer"
+PROJECTS_DIR="${BASE_DIR}/projects"
+TOOLS_DIR="${BASE_DIR}/tools"
+
+mkdir -p "$PROJECTS_DIR"
+mkdir -p "$TOOLS_DIR"
+
+show_help() {
+  cat <<EOF
+Startup CLI
+
+Uso:
+  startup init <nombre-proyecto>
+  startup list
+  startup find <texto>
+  startup docs
+  startup docs <nombre-proyecto>
+  startup open <nombre-proyecto>
+  startup tree <nombre-proyecto>
+  startup help
+
+Comandos:
+  init    Crea un proyecto con estructura base
+  list    Lista todos los proyectos
+  find    Busca proyectos por nombre
+  docs    Selecciona o abre la documentación de un proyecto
+  open    Imprime la ruta de un proyecto
+  tree    Muestra estructura básica del proyecto
+  help    Muestra esta ayuda
+
+Ejemplos:
+  startup init blitz-api
+  startup list
+  startup find blitz
+  startup docs
+  startup docs blitz-api
+EOF
+}
+
+project_exists() {
+  local project_name="$1"
+  [[ -d "${PROJECTS_DIR}/${project_name}" ]]
+}
+
+create_readme() {
+  local project_name="$1"
+  local project_path="$2"
+
+  cat > "${project_path}/README.md" <<EOF
+# ${project_name}
+
+## Descripción
+Proyecto creado con Startup CLI.
+
+## Estructura
+- apps: frontends, admin, mobile
+- backend: api, auth, workers
+- database: schema, migrations, seeds
+- infra: aws, docker, ci/cd
+- docs: documentación técnica y de producto
+- scripts: automatizaciones
+- assets: recursos estáticos
+- config: configuraciones compartidas
+
+## Inicio rápido
+1. Revisa docs/README.md
+2. Agrega tu app en apps/
+3. Agrega servicios en backend/
+4. Configura deploy en infra/
+5. Documenta decisiones en docs/architecture/
+EOF
+}
+
+create_docs_readme() {
+  local project_name="$1"
+  local project_path="$2"
+
+  cat > "${project_path}/docs/README.md" <<EOF
+# Documentación de ${project_name}
+
+## Índice
+- architecture/  -> arquitectura general
+- api/           -> contratos y endpoints
+- product/       -> visión, alcance, roadmap
+- deployment/    -> guías de despliegue
+- decisions/     -> decisiones técnicas
+- runbooks/      -> operación y soporte
+
+## Recomendación
+Documenta aquí:
+- stack tecnológico
+- variables de entorno
+- flujo local
+- flujo de deploy
+- dependencias críticas
+EOF
+}
+
+create_env_example() {
+  local project_path="$1"
+
+  cat > "${project_path}/.env.example" <<'EOF'
+APP_NAME=
+NODE_ENV=development
+PORT=3000
+
+DATABASE_URL=
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+EOF
+}
+
+create_gitignore() {
+  local project_path="$1"
+
+  cat > "${project_path}/.gitignore" <<'EOF'
+# macOS
+.DS_Store
+
+# logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# env
+.env
+.env.local
+.env.*.local
+
+# node
+node_modules/
+dist/
+build/
+.next/
+coverage/
+
+# temp
+tmp/
+.cache/
+
+# editors
+.vscode/
+.idea/
+
+# backups
+archive/
+backups/
+EOF
+}
+
+create_scripts() {
+  local project_path="$1"
+
+  cat > "${project_path}/scripts/deploy.sh" <<'EOF'
+#!/usr/bin/env bash
+set -e
+echo "Agrega aquí tu flujo de deploy."
+EOF
+
+  cat > "${project_path}/scripts/docs.sh" <<'EOF'
+#!/usr/bin/env bash
+set -e
+
+DOCS_DIR="$(cd "$(dirname "$0")/../docs" && pwd)"
+
+if command -v code >/dev/null 2>&1; then
+  code "$DOCS_DIR"
+  exit 0
+fi
+
+if command -v open >/dev/null 2>&1; then
+  open "$DOCS_DIR"
+  exit 0
+fi
+
+echo "No se encontró 'code' ni 'open'."
+echo "Abre manualmente: $DOCS_DIR"
+EOF
+
+  chmod +x "${project_path}/scripts/deploy.sh"
+  chmod +x "${project_path}/scripts/docs.sh"
+}
+
+create_structure() {
+  local project_name="$1"
+  local project_path="${PROJECTS_DIR}/${project_name}"
+
+  if [[ -z "$project_name" ]]; then
+    echo "Error: debes indicar un nombre de proyecto."
+    exit 1
+  fi
+
+  if project_exists "$project_name"; then
+    echo "Error: ya existe ${project_path}"
+    exit 1
+  fi
+
+  echo "Creando proyecto: ${project_name}"
+  echo "Ruta: ${project_path}"
+  echo
+
+  read -r -p "¿Quieres incluir carpeta de respaldo/backups y archive? (y/n): " include_backup
+  read -r -p "¿Incluye frontend? (y/n): " include_frontend
+  read -r -p "¿Incluye backend? (y/n): " include_backend
+  read -r -p "¿Incluye base de datos? (y/n): " include_database
+  read -r -p "¿Incluye infraestructura/deploy? (y/n): " include_infra
+
+  mkdir -p "$project_path"
+  mkdir -p "${project_path}/docs/architecture"
+  mkdir -p "${project_path}/docs/api"
+  mkdir -p "${project_path}/docs/product"
+  mkdir -p "${project_path}/docs/deployment"
+  mkdir -p "${project_path}/docs/decisions"
+  mkdir -p "${project_path}/docs/runbooks"
+  mkdir -p "${project_path}/scripts"
+  mkdir -p "${project_path}/assets"
+  mkdir -p "${project_path}/config"
+  mkdir -p "${project_path}/logs"
+  mkdir -p "${project_path}/tmp"
+
+  if [[ "$include_frontend" =~ ^[Yy]$ ]]; then
+    mkdir -p "${project_path}/apps/web/src"
+    mkdir -p "${project_path}/apps/admin/src"
+    mkdir -p "${project_path}/apps/mobile/src"
+  fi
+
+  if [[ "$include_backend" =~ ^[Yy]$ ]]; then
+    mkdir -p "${project_path}/backend/api/src"
+    mkdir -p "${project_path}/backend/auth/src"
+    mkdir -p "${project_path}/backend/workers/src"
+  fi
+
+  if [[ "$include_database" =~ ^[Yy]$ ]]; then
+    mkdir -p "${project_path}/database/schema"
+    mkdir -p "${project_path}/database/migrations"
+    mkdir -p "${project_path}/database/seeds"
+    mkdir -p "${project_path}/database/backups"
+  fi
+
+  if [[ "$include_infra" =~ ^[Yy]$ ]]; then
+    mkdir -p "${project_path}/infra/aws"
+    mkdir -p "${project_path}/infra/docker"
+    mkdir -p "${project_path}/infra/ci-cd"
+    mkdir -p "${project_path}/deployment"
+  fi
+
+  if [[ "$include_backup" =~ ^[Yy]$ ]]; then
+    mkdir -p "${project_path}/archive"
+    mkdir -p "${project_path}/backups"
+  fi
+
+  create_readme "$project_name" "$project_path"
+  create_docs_readme "$project_name" "$project_path"
+  create_env_example "$project_path"
+  create_gitignore "$project_path"
+  create_scripts "$project_path"
+
+  echo
+  echo "Proyecto creado correctamente."
+  echo
+  find "$project_path" -maxdepth 2 -type d | sort
+}
+
+list_projects() {
+  if [[ ! -d "$PROJECTS_DIR" ]]; then
+    echo "No existe la carpeta de proyectos."
+    exit 0
+  fi
+
+  echo "Proyectos en ${PROJECTS_DIR}:"
+  find "$PROJECTS_DIR" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort
+}
+
+find_projects() {
+  local query="${1:-}"
+
+  if [[ -z "$query" ]]; then
+    echo "Uso: startup find <texto>"
+    exit 1
+  fi
+
+  find "$PROJECTS_DIR" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | grep -i "$query" || true
+}
+
+open_project() {
+  local project_name="${1:-}"
+  local project_path="${PROJECTS_DIR}/${project_name}"
+
+  if [[ -z "$project_name" ]]; then
+    echo "Uso: startup open <nombre-proyecto>"
+    exit 1
+  fi
+
+  if ! project_exists "$project_name"; then
+    echo "No existe el proyecto: $project_name"
+    exit 1
+  fi
+
+  echo "$project_path"
+}
+
+tree_project() {
+  local project_name="${1:-}"
+  local project_path="${PROJECTS_DIR}/${project_name}"
+
+  if [[ -z "$project_name" ]]; then
+    echo "Uso: startup tree <nombre-proyecto>"
+    exit 1
+  fi
+
+  if ! project_exists "$project_name"; then
+    echo "No existe el proyecto: $project_name"
+    exit 1
+  fi
+
+  find "$project_path" -maxdepth 3 | sed "s|$project_path|.|"
+}
+
+select_project_interactive() {
+  mapfile -t projects < <(find "$PROJECTS_DIR" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort)
+
+  if [[ ${#projects[@]} -eq 0 ]]; then
+    echo "No hay proyectos en ${PROJECTS_DIR}"
+    exit 1
+  fi
+
+  echo "Selecciona un proyecto:"
+  select project in "${projects[@]}"; do
+    if [[ -n "${project:-}" ]]; then
+      echo "$project"
+      return
+    fi
+    echo "Selección inválida"
+  done
+}
+
+open_docs() {
+  local project_name="${1:-}"
+
+  if [[ -z "$project_name" ]]; then
+    project_name="$(select_project_interactive)"
+  fi
+
+  local project_path="${PROJECTS_DIR}/${project_name}"
+
+  if ! project_exists "$project_name"; then
+    echo "No existe el proyecto: $project_name"
+    exit 1
+  fi
+
+  local docs_path="${project_path}/docs"
+  local docs_script="${project_path}/scripts/docs.sh"
+
+  if [[ -x "$docs_script" ]]; then
+    "$docs_script"
+    exit 0
+  fi
+
+  if command -v code >/dev/null 2>&1; then
+    code "$docs_path"
+    exit 0
+  fi
+
+  if command -v open >/dev/null 2>&1; then
+    open "$docs_path"
+    exit 0
+  fi
+
+  echo "Documentación: $docs_path"
+}
+
+main() {
+  local command="${1:-}"
+
+  case "$command" in
+    init)
+      shift
+      create_structure "${1:-}"
+      ;;
+    list)
+      list_projects
+      ;;
+    find)
+      shift
+      find_projects "${1:-}"
+      ;;
+    docs)
+      shift
+      open_docs "${1:-}"
+      ;;
+    open)
+      shift
+      open_project "${1:-}"
+      ;;
+    tree)
+      shift
+      tree_project "${1:-}"
+      ;;
+    help|-h|--help|"")
+      show_help
+      ;;
+    *)
+      echo "Comando no reconocido: $command"
+      echo
+      show_help
+      exit 1
+      ;;
+  esac
+}
+
+main "$@"
